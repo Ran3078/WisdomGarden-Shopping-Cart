@@ -37,6 +37,8 @@ PRODUCT_CATEGORIES: dict[str, str] = {
 
 @dataclass(frozen=True)
 class Promotion:
+    """促銷資訊：指定日期對某品類套用折扣倍率。"""
+
     date: str
     discount: Decimal
     category: str
@@ -44,12 +46,15 @@ class Promotion:
 
 @dataclass(frozen=True)
 class CartItem:
+    """購物車單筆商品：數量、名稱與單價。"""
+
     quantity: int
     name: str
     unit_price: Decimal
 
     @property
     def category(self) -> str:
+        """依商品名稱查詢所屬品類。"""
         try:
             return PRODUCT_CATEGORIES[self.name]
         except KeyError as exc:
@@ -58,6 +63,8 @@ class CartItem:
 
 @dataclass(frozen=True)
 class Coupon:
+    """優惠券：到期日、滿額門檻與折抵金額。"""
+
     expiry_date: str
     threshold: Decimal
     discount_amount: Decimal
@@ -65,6 +72,8 @@ class Coupon:
 
 @dataclass(frozen=True)
 class SettlementInput:
+    """一次結算所需的完整輸入資料。"""
+
     promotions: list[Promotion]
     items: list[CartItem]
     settlement_date: str
@@ -81,11 +90,13 @@ def parse_date(raw: str) -> str:
 
 
 def date_tuple(raw: str) -> tuple[int, int, int]:
+    """將日期字串轉為 (年, 月, 日) 元組，便於比較先後。"""
     year, month, day = (int(p) for p in parse_date(raw).split("."))
     return year, month, day
 
 
 def parse_promotion(line: str) -> Promotion:
+    """解析促銷列，格式為「日期|折扣|品類」。"""
     date_raw, discount_raw, category = (part.strip() for part in line.split("|"))
     return Promotion(
         date=parse_date(date_raw),
@@ -95,6 +106,7 @@ def parse_promotion(line: str) -> Promotion:
 
 
 def parse_cart_item(line: str) -> CartItem:
+    """解析商品列，格式為「數量*商品:單價」。"""
     quantity_raw, rest = line.split("*", 1)
     name, price_raw = rest.split(":", 1)
     return CartItem(
@@ -105,6 +117,7 @@ def parse_cart_item(line: str) -> CartItem:
 
 
 def parse_coupon(line: str) -> Coupon:
+    """解析優惠券列，格式為「到期日 門檻 折抵金額」。"""
     parts = line.split()
     if len(parts) != 3:
         raise ValueError(f"無效優惠券: {line}")
@@ -160,6 +173,7 @@ def find_category_discount(
     settlement_date: str,
     category: str,
 ) -> Decimal:
+    """找出結算日對應品類的折扣倍率；若無促銷則回傳 1。"""
     for promo in promotions:
         if (
             date_tuple(promo.date) == date_tuple(settlement_date)
@@ -170,6 +184,7 @@ def find_category_discount(
 
 
 def money(value: Decimal) -> Decimal:
+    """將金額四捨五入至小數點後 2 位。"""
     return value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
@@ -258,6 +273,7 @@ def _read_interactive() -> str:
 
 
 def main() -> None:
+    """程式進入點：支援檔案參數、互動輸入或標準輸入管線。"""
     import sys
 
     if hasattr(sys.stdin, "reconfigure"):
